@@ -1,0 +1,188 @@
+#!/usr/bin/awk -f
+
+function getInput()
+{
+	getline number < "-"
+	if ((number < 2) || (number > 9) || (number%2!=0))   
+	{
+		printf("\nCislo je bud nespravne  alebo to vobec nie je cislo\nPre pokracovanie vyber parne cislo medzi 2-8\n");
+		getInput();
+	}
+}
+
+function generateArray(resolution){
+# vytvori pole s cislami 
+	pexesoNumber = 33; #chcem mat len znaky, ktore sa daju vypisat - od 33. znaku ascii tabulky = !
+	isUsed = 0; ignoreUsed = 1;
+	for (i = 1; i <= resolution; i++)
+	{
+		for (j = 1; j <= resolution; j++)
+		{
+			if(ignoreUsed == 1)
+			{
+				ignoreUsed = 0;	
+			}
+			else 
+			{
+				if( isUsed == 0) 
+				{ 
+					isUsed = 1; 
+				}
+				else 
+				{
+					pexesoNumber++; 
+					isUsed = 0;
+				}
+			}
+			array[ i, j ] = pexesoNumber;
+		}
+	}
+}
+
+function printArray()
+{	
+	#vypis pre skraslenie zaciatku puzzle
+	printf("   ");
+	for (k = 1; k <= number; k++){ printf("|%2d ", k); }
+	printf("|\n");	
+	printHorizontal();
+	printf("\n");
+	#vypis samotneho puzzle
+	for(i = 1; i <= number; i++)
+	{	
+		printRow();
+		printf("\n");
+		printHorizontal();
+		printf("\n");
+	}
+}
+
+function printRow()
+{
+	#vypis poradoveho cisla riadku
+	printf("%3d|", i); 
+	#vypis celeho riadku podla parametrov	
+	for(j = 1; j <= number; j++)
+	{
+		if (((i == $1) && (j == $2)) || ((i == $3) && (j == $4))) 
+		{ 
+			printf(" %c |", array[i, j])
+		}
+		else 
+		{
+			if(array[ i, j ] == 32)
+			{
+				printf("   |");
+			}
+			else
+			{
+				printf(" x |");
+			}
+		}
+	}		
+	
+}
+
+function printHorizontal() #vypis horizontalnej ciary
+{
+	printf " "
+	for (k = 1; k <= 4*(number) + 3; k++){ printf "-"}
+}
+
+function randomizeArray(times)
+{ 
+	for(i = 1; i <= times; i++){
+		randomx1 = randint(number) + 1;
+		randomy1 = randint(number) + 1;
+		randomx2 = randint(number) + 1;
+		randomy2 = randint(number) + 1;
+		temp = array[ randomx1, randomy1 ];
+		array[ randomx1, randomy1 ] = array[ randomx2, randomy2];
+		array[ randomx2, randomy2 ] = temp;
+	}
+}
+
+function randint(n)
+{
+	return int(n * rand());
+}
+
+
+BEGIN{
+	system("clear");
+	printf("\n******************************\nVitaj, toto je hra PEXESO\n******************************\nZvol si obtiaznost\n(parne cislo v intervale 2-8)\n");	
+	getInput();
+	generateArray(number);
+	randomizeArray(1000);
+	printArray();
+	printf("pre pomoc napiste --help\n");
+	tahy = 1;
+	spravnych = 0;
+	hinty = 0;
+}
+#na kazdy riadok sa vykona:
+{ 
+	system("clear");
+	#if($1 == "restart") { tu doplnit znovuspustenie hry }
+	if($1 == "--help") 
+	{
+		printf(	"Pre otocenie dvoch pexies zadaj suradnice v tvare - x1 y1 x2 y2\nPre pouzitie hintu zadaj 2x tu istu suradnicu\nPre pokracovanie zadaj suradnice:\n");
+	}
+	else
+	{
+		printf("Tahov: %d\nSkore: %d\nHinty: %d\n", tahy, spravnych, hinty)
+		if((($1 != $3) || ($2 != $4)) && ($1 > 0) && ($1 <= number ) && ($2 > 0) && ($2 <= number ) && ($3 > 0) && ($3 <= number) && ($4 > 0) && ($4 <= number)) 
+		{ 
+			printArray();
+
+	  		if ((array[$1, $2] == 32) || (array[$3, $4] == 32))
+			{
+				printf("Aspon jedno z policok je uz prazdne\n");
+			}
+	
+			else
+			{
+				tahy++;		
+	  			printf("Na %d riadku a %d stlpci sa nachadza znak: %c\n", $1, $2, array[$1, $2]);
+		  		printf("Na %d riadku a %d stlpci sa nachadza znak: %c\n", $3, $4, array[$3, $4]);	  
+				if(array[$1, $2] == array[$3, $4])
+		  		{
+					printf("Nasli ste zhodu!\n");
+					array[$1, $2] = 32; # 32. znak je SPACE
+					array[$3, $4] = 32; 
+					spravnych++;
+				}
+				else
+				{
+					printf("Nenasli ste zhodu\n");
+				} 
+			}
+		}	
+		else
+		{ 
+			printArray();
+			if(($1 == $3) && ($2 == $4))
+			{
+				hinty++;
+				printf("Prave ste pouzili hint\nObrazovka sa prepise o 3 sekundy\n");
+				system("sleep 3");
+				system("clear");
+				printf("Pokracuj v hre zadavanim suradnic\n")				
+			}
+			else 
+			{
+				print("Incorrect input\n");
+			}			
+		}
+	}
+	if (spravnych == number) { exit }
+}
+END{
+	system("clear");
+	printf("Gratulujem, podarilo sa ti vyhrat v %d tahoch, pri pouziti %d hintov!\nChcete hrat este raz? (Y/N)\n", tahy, hinty);
+	getline var;
+	if ((var == Y) || (var ==y))
+	{
+		# to iste co by sa napisalo do restartu
+	}	
+}
